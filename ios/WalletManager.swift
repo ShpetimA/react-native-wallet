@@ -188,11 +188,142 @@ open class WalletManager: UIViewController {
       return pass.primaryAccountIdentifier == identifier as String
     }
   }
+
+  @objc
+  public func listAppleWalletPasses() -> [NSDictionary] {
+    let localPasses = passLibrary.passes(of: .secureElement).compactMap { pass -> NSDictionary? in
+      guard let secureElementPass = pass.secureElementPass else {
+        return nil
+      }
+
+      return makeAppleWalletPassDictionary(
+        passTypeIdentifier: pass.passTypeIdentifier,
+        serialNumber: pass.serialNumber,
+        primaryAccountIdentifier: secureElementPass.primaryAccountIdentifier,
+        lastDigits: secureElementPass.primaryAccountNumberSuffix,
+        activationState: secureElementPass.passActivationState.rawValue,
+        isRemote: pass.isRemotePass
+      )
+    }
+
+    let remotePasses = passLibrary.remoteSecureElementPasses.map { pass in
+      makeAppleWalletPassDictionary(
+        passTypeIdentifier: pass.passTypeIdentifier,
+        serialNumber: pass.serialNumber,
+        primaryAccountIdentifier: pass.primaryAccountIdentifier,
+        lastDigits: pass.primaryAccountNumberSuffix,
+        activationState: pass.passActivationState.rawValue,
+        isRemote: true
+      )
+    }
+
+    return localPasses + remotePasses
+  }
+
+  @objc
+  public func activateAppleWalletPass(passData: NSDictionary, completion: @escaping CompletionHandler) {
+    guard passLibrary.isSecureElementPassActivationAvailable else {
+      completion(.error, [
+        "errorMessage": "Secure Element pass activation is not available for this device"
+      ])
+      return
+    }
+
+    guard
+      let passTypeIdentifier = passData["passTypeIdentifier"] as? String,
+      !passTypeIdentifier.isEmpty,
+      let serialNumber = passData["serialNumber"] as? String,
+      !serialNumber.isEmpty,
+      let activationDataString = passData["activationData"] as? String,
+      !activationDataString.isEmpty
+    else {
+      completion(.error, [
+        "errorMessage": "Invalid pass activation data"
+      ])
+      return
+    }
+
+    guard let activationData = Data(base64Encoded: activationDataString) else {
+      completion(.error, [
+        "errorMessage": "activationData must be a valid base64 encoded string"
+      ])
+      return
+    }
+
+    guard let secureElementPass = findSecureElementPass(
+      passTypeIdentifier: passTypeIdentifier,
+      serialNumber: serialNumber
+    ) else {
+      completion(.error, [
+        "errorMessage": "Secure Element pass not found"
+      ])
+      return
+    }
+
+    if secureElementPass.passActivationState == .activated {
+      completion(.completed, ["success": true])
+      return
+    }
+
+    guard secureElementPass.passActivationState == .requiresActivation else {
+      completion(.error, [
+        "errorMessage": "Secure Element pass is not eligible for activation. Current state: \(secureElementPass.passActivationState.rawValue)"
+      ])
+      return
+    }
+
+    passLibrary.activate(secureElementPass, activationData: activationData) { success, error in
+      if let error {
+        completion(.error, [
+          "errorMessage": error.localizedDescription
+        ])
+        return
+      }
+
+      completion(.completed, ["success": success])
+    }
+  }
   
   private func isPassKitAvailable() -> Bool {
     return PKAddPaymentPassViewController.canAddPaymentPass()
   }
   
+  private func findSecureElementPass(passTypeIdentifier: String, serialNumber: String) -> PKSecureElementPass? {
+    if let pass = passLibrary.pass(withPassTypeIdentifier: passTypeIdentifier, serialNumber: serialNumber)?.secureElementPass {
+      return pass
+    }
+
+    return passLibrary.remoteSecureElementPasses.first { pass in
+      pass.passTypeIdentifier == passTypeIdentifier && pass.serialNumber == serialNumber
+    }
+  }
+
+  private func makeAppleWalletPassDictionary(
+    passTypeIdentifier: String,
+    serialNumber: String,
+    primaryAccountIdentifier: String?,
+    lastDigits: String?,
+    activationState: Int,
+    isRemote: Bool
+  ) -> NSDictionary {
+    let result = NSMutableDictionary(dictionary: [
+      "passTypeIdentifier": passTypeIdentifier,
+      "serialNumber": serialNumber,
+      "activationState": activationState,
+      "isRemote": isRemote
+    ])
+
+    if let primaryAccountIdentifier, !primaryAccountIdentifier.isEmpty {
+      result["primaryAccountIdentifier"] = primaryAccountIdentifier
+    }
+
+    if let lastDigits, !lastDigits.isEmpty {
+      result["lastDigits"] = lastDigits
+    }
+
+    return result
+  }
+
   private func hideModal() {
     DispatchQueue.main.async {
       if let enrollVC = self.addPassViewController, enrollVC.isBeingPresented || enrollVC.presentingViewController != nil {
