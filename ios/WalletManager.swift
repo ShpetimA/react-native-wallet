@@ -111,6 +111,8 @@ open class WalletManager: UIViewController {
     configuration.cardholderName = card.cardHolderName
     configuration.primaryAccountSuffix = card.lastDigits
     configuration.localizedDescription = String(card.cardDescription)
+    configuration.paymentNetwork = card.network
+    configuration.primaryAccountIdentifier = card.primaryAccountIdentifier
 
     guard let enrollViewController = PKAddPaymentPassViewController(requestConfiguration: configuration, delegate: self) else {
       completion(.error, [
@@ -187,6 +189,19 @@ open class WalletManager: UIViewController {
     return getPassActivationState { pass in
       return pass.primaryAccountIdentifier == identifier as String
     }
+  }
+
+  @objc
+  public func canAddSecureElementPass(primaryAccountIdentifier: NSString) -> Bool {
+    guard !primaryAccountIdentifier.isEqual(to: "") else {
+      return false
+    }
+
+    if #available(iOS 13.4, *) {
+      return passLibrary.canAddSecureElementPass(primaryAccountIdentifier: primaryAccountIdentifier as String)
+    }
+
+    return false
   }
 
   @objc

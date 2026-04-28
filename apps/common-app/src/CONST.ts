@@ -1,4 +1,4 @@
-import type {AndroidCardData, UserAddress, IOSEncryptPayload, IOSCardData, AndroidResumeCardData} from '@expensify/react-native-wallet/src/NativeWallet';
+import type {AndroidCardData, UserAddress, IOSEncryptPayload, IOSCardData, AndroidResumeCardData} from '../../../src/NativeWallet';
 
 const dummyAddress: UserAddress = {
   name: 'John Doe',
@@ -31,6 +31,7 @@ const IOSDummyCardData: IOSCardData = {
   cardHolderName: 'John Doe',
   lastDigits: '4321',
   cardDescription: 'Card Description',
+  primaryAccountIdentifier: 'dummy-primary-account-identifier',
 };
 
 // Base 64 encoded values

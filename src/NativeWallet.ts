@@ -41,6 +41,7 @@ type IOSCardData = {
   cardHolderName: string;
   lastDigits: string;
   cardDescription: string;
+  primaryAccountIdentifier: string;
 };
 
 type onCardActivatedPayload = {
@@ -93,6 +94,7 @@ export interface Spec extends TurboModule {
   addCardToGoogleWallet(cardData: AndroidCardData): Promise<number>;
   resumeAddCardToGoogleWallet(cardData: AndroidResumeCardData): Promise<number>;
   listTokens(): Promise<TokenInfo[]>;
+  canAddSecureElementPass(primaryAccountIdentifier: string): Promise<boolean>;
   listAppleWalletPasses(): Promise<IOSWalletPassNative[]>;
   IOSPresentAddPaymentPassView(cardData: IOSCardData): Promise<IOSAddPaymentPassData>;
   IOSHandleAddPaymentPassResponse(payload: IOSEncryptPayload): Promise<IOSAddPaymentPassData | null>;

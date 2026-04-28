@@ -136,6 +136,18 @@ async function listTokens(): Promise<TokenInfo[]> {
   return Wallet.listTokens();
 }
 
+async function canAddSecureElementPass(primaryAccountIdentifier: string): Promise<boolean> {
+  if (Platform.OS === 'android') {
+    return Promise.resolve(false);
+  }
+
+  if (!Wallet) {
+    return getModuleLinkingRejection();
+  }
+
+  return Wallet.canAddSecureElementPass(primaryAccountIdentifier);
+}
+
 async function listAppleWalletPasses(): Promise<IOSWalletPass[]> {
   if (Platform.OS === 'android') {
     return Promise.resolve([]);
@@ -215,6 +227,7 @@ export {
   addCardToGoogleWallet,
   resumeAddCardToGoogleWallet,
   listTokens,
+  canAddSecureElementPass,
   listAppleWalletPasses,
   addCardToAppleWallet,
   activateAppleWalletPass,
