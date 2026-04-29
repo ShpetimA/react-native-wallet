@@ -183,7 +183,13 @@ RCT_REMAP_METHOD(canAddSecureElementPass,
                  resolve:(RCTPromiseResolveBlock)resolve
                  reject:(RCTPromiseRejectBlock)reject)
 {
-  resolve(@([walletManager canAddSecureElementPassWithPrimaryAccountIdentifier:primaryAccountIdentifier]));
+  @try {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      resolve(@([self->walletManager canAddSecureElementPassWithPrimaryAccountIdentifier:[self safeString:primaryAccountIdentifier]]));
+    });
+  } @catch (NSException *exception) {
+    [self rejectWithErrorType:@"can_add_secure_element_pass_failed" code:500 description:exception.reason ?: @"An unexpected error occurred." rejecter:reject];
+  }
 }
 
 RCT_REMAP_METHOD(listAppleWalletPasses,
