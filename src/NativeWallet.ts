@@ -66,6 +66,7 @@ type IOSPassActivationData = {
   passTypeIdentifier: string;
   serialNumber: string;
   activationData: string;
+  isRemote: boolean;
 };
 
 type IOSWalletPassNative = {

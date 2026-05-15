@@ -207,7 +207,8 @@ open class WalletManager: UIViewController {
   @objc
   public func listAppleWalletPasses() -> [NSDictionary] {
     let localPasses = passLibrary.passes(of: .secureElement).compactMap { pass -> NSDictionary? in
-      guard let secureElementPass = pass.secureElementPass else {
+      guard pass.isRemotePass == false,
+            let secureElementPass = pass.secureElementPass else {
         return nil
       }
 
@@ -258,6 +259,8 @@ open class WalletManager: UIViewController {
       return
     }
 
+    let isRemote = passData["isRemote"] as? Bool
+
     guard let activationData = Data(base64Encoded: activationDataString) else {
       completion(.error, [
         "errorMessage": "activationData must be a valid base64 encoded string"
@@ -267,7 +270,8 @@ open class WalletManager: UIViewController {
 
     guard let secureElementPass = findSecureElementPass(
       passTypeIdentifier: passTypeIdentifier,
-      serialNumber: serialNumber
+      serialNumber: serialNumber,
+      isRemote: isRemote
     ) else {
       completion(.error, [
         "errorMessage": "Secure Element pass not found"
@@ -303,9 +307,20 @@ open class WalletManager: UIViewController {
     return PKAddPaymentPassViewController.canAddPaymentPass()
   }
   
-  private func findSecureElementPass(passTypeIdentifier: String, serialNumber: String) -> PKSecureElementPass? {
-    if let pass = passLibrary.pass(withPassTypeIdentifier: passTypeIdentifier, serialNumber: serialNumber)?.secureElementPass {
-      return pass
+  private func findSecureElementPass(passTypeIdentifier: String, serialNumber: String, isRemote: Bool?) -> PKSecureElementPass? {
+    if isRemote == true {
+      return passLibrary.remoteSecureElementPasses.first { pass in
+        pass.passTypeIdentifier == passTypeIdentifier && pass.serialNumber == serialNumber
+      }
+    }
+
+    if let pass = passLibrary.pass(withPassTypeIdentifier: passTypeIdentifier, serialNumber: serialNumber),
+       pass.isRemotePass == false {
+      return pass.secureElementPass
+    }
+
+    if isRemote == false {
+      return nil
     }
 
     return passLibrary.remoteSecureElementPasses.first { pass in

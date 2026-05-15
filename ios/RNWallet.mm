@@ -88,6 +88,7 @@ RCT_REMAP_METHOD(activateAppleWalletPass,
       @"passTypeIdentifier": [self safeString:passData.passTypeIdentifier()],
       @"serialNumber": [self safeString:passData.serialNumber()],
       @"activationData": [self safeString:passData.activationData()],
+      @"isRemote": @(passData.isRemote()),
     };
     [self->walletManager activateAppleWalletPassWithPassData:passDataDict completion:^(OperationResult result, NSDictionary* data) {
       [self handleBooleanWalletResponse:result data:data completedBlock:resolve errorPrefix:@"activate_card_failed" defaultErrorMessage:@"Failed to activate the Apple Wallet pass" rejecter:reject];
@@ -151,6 +152,7 @@ RCT_REMAP_METHOD(activateAppleWalletPass,
       @"passTypeIdentifier": [self safeString:passData[@"passTypeIdentifier"]],
       @"serialNumber": [self safeString:passData[@"serialNumber"]],
       @"activationData": [self safeString:passData[@"activationData"]],
+      @"isRemote": passData[@"isRemote"] ?: @NO,
     };
     [self->walletManager activateAppleWalletPassWithPassData:passDataDict completion:^(OperationResult result, NSDictionary* data) {
       [self handleBooleanWalletResponse:result data:data completedBlock:resolve errorPrefix:@"activate_card_failed" defaultErrorMessage:@"Failed to activate the Apple Wallet pass" rejecter:reject];
