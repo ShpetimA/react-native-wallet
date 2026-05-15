@@ -112,7 +112,7 @@ open class WalletManager: UIViewController {
     configuration.primaryAccountSuffix = card.lastDigits
     configuration.localizedDescription = String(card.cardDescription)
     configuration.paymentNetwork = card.network
-    configuration.primaryAccountIdentifier = card.primaryAccountIdentifier
+    configuration.primaryAccountIdentifier = resolvedPrimaryAccountIdentifier(for: card)
 
     guard let enrollViewController = PKAddPaymentPassViewController(requestConfiguration: configuration, delegate: self) else {
       completion(.error, [
@@ -305,6 +305,37 @@ open class WalletManager: UIViewController {
   
   private func isPassKitAvailable() -> Bool {
     return PKAddPaymentPassViewController.canAddPaymentPass()
+  }
+
+  private func resolvedPrimaryAccountIdentifier(for card: CardInfo) -> String {
+    let secureElementPasses = allSecureElementPasses()
+
+    if let exactMatch = secureElementPasses.first(where: {
+      $0.primaryAccountIdentifier == card.primaryAccountIdentifier
+    }) {
+      return exactMatch.primaryAccountIdentifier
+    }
+
+    if let suffixMatch = secureElementPasses.first(where: {
+      $0.primaryAccountNumberSuffix == card.lastDigits ||
+        $0.primaryAccountNumberSuffix.hasSuffix(card.lastDigits)
+    }) {
+      return suffixMatch.primaryAccountIdentifier
+    }
+
+    return card.primaryAccountIdentifier
+  }
+
+  private func allSecureElementPasses() -> [PKSecureElementPass] {
+    let localPasses = passLibrary.passes(of: .secureElement).compactMap { pass -> PKSecureElementPass? in
+      guard pass.isRemotePass == false else {
+        return nil
+      }
+
+      return pass.secureElementPass
+    }
+
+    return localPasses + passLibrary.remoteSecureElementPasses
   }
   
   private func findSecureElementPass(passTypeIdentifier: String, serialNumber: String, isRemote: Bool?) -> PKSecureElementPass? {
